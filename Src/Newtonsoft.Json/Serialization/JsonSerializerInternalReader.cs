@@ -750,60 +750,55 @@ To fix this error either change the JSON to a {1} or change the deserialized typ
 
             JsonArrayContract arrayContract = EnsureArrayContract(reader, objectType, contract);
 
-            if (existingValue == null)
+
+            bool createdFromNonDefaultCreator;
+            IList list = CreateNewList(reader, arrayContract, out createdFromNonDefaultCreator);
+
+            if (createdFromNonDefaultCreator)
             {
-                bool createdFromNonDefaultCreator;
-                IList list = CreateNewList(reader, arrayContract, out createdFromNonDefaultCreator);
+                if (id != null)
+                    throw JsonSerializationException.Create(reader, "Cannot preserve reference to array or readonly list, or list created from a non-default constructor: {0}.".FormatWith(CultureInfo.InvariantCulture, contract.UnderlyingType));
 
-                if (createdFromNonDefaultCreator)
-                {
-                    if (id != null)
-                        throw JsonSerializationException.Create(reader, "Cannot preserve reference to array or readonly list, or list created from a non-default constructor: {0}.".FormatWith(CultureInfo.InvariantCulture, contract.UnderlyingType));
+                if (contract.OnSerializingCallbacks.Count > 0)
+                    throw JsonSerializationException.Create(reader, "Cannot call OnSerializing on an array or readonly list, or list created from a non-default constructor: {0}.".FormatWith(CultureInfo.InvariantCulture, contract.UnderlyingType));
 
-                    if (contract.OnSerializingCallbacks.Count > 0)
-                        throw JsonSerializationException.Create(reader, "Cannot call OnSerializing on an array or readonly list, or list created from a non-default constructor: {0}.".FormatWith(CultureInfo.InvariantCulture, contract.UnderlyingType));
+                if (contract.OnErrorCallbacks.Count > 0)
+                    throw JsonSerializationException.Create(reader, "Cannot call OnError on an array or readonly list, or list created from a non-default constructor: {0}.".FormatWith(CultureInfo.InvariantCulture, contract.UnderlyingType));
 
-                    if (contract.OnErrorCallbacks.Count > 0)
-                        throw JsonSerializationException.Create(reader, "Cannot call OnError on an array or readonly list, or list created from a non-default constructor: {0}.".FormatWith(CultureInfo.InvariantCulture, contract.UnderlyingType));
-
-                    if (arrayContract.ParametrizedCreator == null && !arrayContract.IsArray)
-                        throw JsonSerializationException.Create(reader, "Cannot deserialize readonly or fixed size list: {0}.".FormatWith(CultureInfo.InvariantCulture, contract.UnderlyingType));
-                }
-
-                if (!arrayContract.IsMultidimensionalArray)
-                    PopulateList(list, reader, arrayContract, member, id);
-                else
-                    PopulateMultidimensionalArray(list, reader, arrayContract, member, id);
-
-                if (createdFromNonDefaultCreator)
-                {
-                    if (arrayContract.IsMultidimensionalArray)
-                    {
-                        list = CollectionUtils.ToMultidimensionalArray(list, arrayContract.CollectionItemType, contract.CreatedType.GetArrayRank());
-                    }
-                    else if (arrayContract.IsArray)
-                    {
-                        Array a = Array.CreateInstance(arrayContract.CollectionItemType, list.Count);
-                        list.CopyTo(a, 0);
-                        list = a;
-                    }
-                    else
-                    {
-                        // call constructor that takes IEnumerable<T>
-                        return arrayContract.ParametrizedCreator(list);
-                    }
-                }
-                else if (list is IWrappedCollection)
-                {
-                    return ((IWrappedCollection)list).UnderlyingCollection;
-                }
-
-                value = list;
+                if (arrayContract.ParametrizedCreator == null && !arrayContract.IsArray)
+                    throw JsonSerializationException.Create(reader, "Cannot deserialize readonly or fixed size list: {0}.".FormatWith(CultureInfo.InvariantCulture, contract.UnderlyingType));
             }
+
+            if (!arrayContract.IsMultidimensionalArray)
+                PopulateList(list, reader, arrayContract, member, id);
             else
+                PopulateMultidimensionalArray(list, reader, arrayContract, member, id);
+
+            if (createdFromNonDefaultCreator)
             {
-                value = PopulateList((arrayContract.ShouldCreateWrapper) ? arrayContract.CreateWrapper(existingValue) : (IList)existingValue, reader, arrayContract, member, id);
+                if (arrayContract.IsMultidimensionalArray)
+                {
+                    list = CollectionUtils.ToMultidimensionalArray(list, arrayContract.CollectionItemType, contract.CreatedType.GetArrayRank());
+                }
+                else if (arrayContract.IsArray)
+                {
+                    Array a = Array.CreateInstance(arrayContract.CollectionItemType, list.Count);
+                    list.CopyTo(a, 0);
+                    list = a;
+                }
+                else
+                {
+                    // call constructor that takes IEnumerable<T>
+                    return arrayContract.ParametrizedCreator(list);
+                }
             }
+            else if (list is IWrappedCollection)
+            {
+                return ((IWrappedCollection)list).UnderlyingCollection;
+            }
+
+            value = list;
+
 
             return value;
         }

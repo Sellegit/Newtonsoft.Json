@@ -264,7 +264,7 @@ namespace Newtonsoft.Json.Utilities
                                                                     if (!TestAccessibility(m, bindingFlags))
                                                                         return false;
 
-                                                                    return m.GetParameters().Select(p => p.ParameterType).SequenceEqual(parameterTypes);
+                                                                    return m.GetParameters().Select(p => p.ParameterType).ToList().SequenceEqual(parameterTypes);
                                                                 }).SingleOrDefault();
         }
 
@@ -278,7 +278,7 @@ namespace Newtonsoft.Json.Utilities
                                                                            return false;
                                                                        if (indexParameters != null)
                                                                        {
-                                                                           if (!p.GetIndexParameters().Select(ip => ip.ParameterType).SequenceEqual(indexParameters))
+                                                                          if (!p.GetIndexParameters().Select(ip => ip.ParameterType).ToList().SequenceEqual(indexParameters))
                                                                                return false;
                                                                        }
 
@@ -318,7 +318,7 @@ namespace Newtonsoft.Json.Utilities
                                                                          if (!TestAccessibility(c, bindingFlags))
                                                                              return false;
 
-                                                                         if (parameterTypes != null && !c.GetParameters().Select(p => p.ParameterType).SequenceEqual(parameterTypes))
+                                                                          if (parameterTypes != null && !c.GetParameters().Select(p => p.ParameterType).ToList().SequenceEqual(parameterTypes))
                                                                              return false;
 
                                                                          return true;
@@ -350,7 +350,7 @@ namespace Newtonsoft.Json.Utilities
             return type.GetField(member, DefaultFlags);
         }
 
-        public static MemberInfo GetField(this Type type, string member, BindingFlags bindingFlags)
+      public static FieldInfo GetField(this Type type, string member, BindingFlags bindingFlags)
         {
             return type.GetTypeInfo().GetDeclaredField(member);
         }
